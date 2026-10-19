@@ -1,0 +1,12 @@
+{
+    "id": "{A822C9E6-8155-453B-B425-FDBFEA4BC8C8}",
+    "name": "Ortsnetz Auslastung",
+    "type": 3,
+    "vendor": "Stephan Sprick",
+    "aliases": [],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "ONA",
+    "url": "https://github.com/da8ter/OrtsnetzAuslastung"
+}

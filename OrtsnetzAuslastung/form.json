@@ -1,0 +1,134 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "Sends the measured grid voltage every 5 minutes to ortsnetz-auslastung.de. Only voltages, a timestamp and an approximate location are sent, plus the optional values chosen below. No API key is needed. Project: https://www.ortsnetz-auslastung.de"
+        },
+        {
+            "type": "CheckBox",
+            "name": "Active",
+            "caption": "Send measurements"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "SelectLocation",
+                    "name": "Location",
+                    "caption": "Location (empty = location of the Symcon system)"
+                },
+                {
+                    "type": "Select",
+                    "name": "Precision",
+                    "caption": "Precision",
+                    "options": [
+                        { "caption": "about 1 km (2 decimals)", "value": 2 },
+                        { "caption": "about 100 m (3 decimals)", "value": 3 },
+                        { "caption": "about 10 m (4 decimals)", "value": 4 }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Voltage (required)",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "At least one phase. Phases without a variable are sent as not measured. If a chosen variable holds no plausible value (0–500 V) or was not updated for 15 minutes, nothing is sent."
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "SelectVariable", "name": "VoltageL1", "caption": "Voltage L1 (V)" },
+                        { "type": "SelectVariable", "name": "VoltageL2", "caption": "Voltage L2 (V)" },
+                        { "type": "SelectVariable", "name": "VoltageL3", "caption": "Voltage L3 (V)" }
+                    ]
+                },
+                { "type": "SelectVariable", "name": "Frequency", "caption": "Grid frequency (Hz, optional)" },
+                {
+                    "type": "CheckBox",
+                    "name": "MinMaxAvg",
+                    "caption": "Also send minimum, maximum and average of voltage and frequency over the interval (from all updates of the variables)"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Further measured values (optional)",
+            "items": [
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "SelectVariable", "name": "CurrentL1", "caption": "Current L1 (A)" },
+                        { "type": "SelectVariable", "name": "CurrentL2", "caption": "Current L2 (A)" },
+                        { "type": "SelectVariable", "name": "CurrentL3", "caption": "Current L3 (A)" }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Grid power: total active power of all phases at the house connection, import positive and export negative. Do not use inverter power or a single phase."
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "SelectVariable", "name": "GridPower", "caption": "Grid power" },
+                        {
+                            "type": "Select",
+                            "name": "GridPowerFactor",
+                            "caption": "Unit",
+                            "options": [
+                                { "caption": "W", "value": 1 },
+                                { "caption": "kW", "value": 1000 }
+                            ]
+                        },
+                        { "type": "CheckBox", "name": "GridPowerInvert", "caption": "Invert sign (variable shows export as positive)" }
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "SelectVariable", "name": "BatterySOC", "caption": "Battery state of charge (%)" },
+                        { "type": "SelectVariable", "name": "PVForecast", "caption": "PV forecast for today (kWh)" }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Site details (sent once after setup, change and restart)",
+            "items": [
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "NumberSpinner", "name": "PlantCapacity", "caption": "PV plant (kWp, 0 = none)", "digits": 2, "minimum": 0, "maximum": 1000 },
+                        { "type": "NumberSpinner", "name": "BatteryCapacity", "caption": "Usable battery capacity (kWh, 0 = none)", "digits": 2, "minimum": 0 }
+                    ]
+                },
+                { "type": "ValidationTextBox", "name": "SmartmeterModel", "caption": "Meter (manufacturer and model, optional)", "validate": "^.{0,120}$", "width": "400px" },
+                { "type": "Label", "caption": "The PV forecast is only sent with a plant size and may be at most 10 kWh per kWp." }
+            ]
+        }
+    ],
+    "actions": [
+        { "type": "Label", "caption": "" },
+        {
+            "type": "RowLayout",
+            "items": [
+                { "type": "Button", "caption": "Show data to be sent", "onClick": "echo ONA_GetPayload($id);" },
+                { "type": "Button", "caption": "Send now", "onClick": "echo ONA_Upload($id);" }
+            ]
+        }
+    ],
+    "status": [
+        { "code": 102, "icon": "active", "caption": "Measurements are being sent" },
+        { "code": 104, "icon": "inactive", "caption": "Sending is switched off" },
+        { "code": 200, "icon": "error", "caption": "Upload failed (network or server)" },
+        { "code": 201, "icon": "error", "caption": "No location: choose one here or set the location of the Symcon system" },
+        { "code": 202, "icon": "error", "caption": "No voltage variable chosen" },
+        { "code": 203, "icon": "error", "caption": "Upload skipped: measured values implausible or stale" },
+        { "code": 204, "icon": "error", "caption": "Measurement rejected by the service (422): check the values" },
+        { "code": 205, "icon": "error", "caption": "The location is blocked by the service (403)" }
+    ]
+}
