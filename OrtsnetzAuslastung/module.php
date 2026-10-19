@@ -52,25 +52,8 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         $this->RegisterTimer('Upload', 0, 'ONA_Upload($_IPS[\'TARGET\']);');
 
         $this->RegisterVariableInteger('STATUS', $this->Translate('Grid status'), $this->LightPresentation(), 10);
-        $this->RegisterVariableInteger('STORAGE', $this->Translate('Storage recommendation'), [
-            'PRESENTATION' => VARIABLE_PRESENTATION_ENUMERATION,
-            'ICON'         => 'Battery',
-            'OPTIONS'      => $this->Options([
-                [OnaPayload::UNKNOWN, 'Unknown', -1],
-                [0, 'No action', 0x808080],
-                [1, 'Charge storage', 0x2E7D32],
-                [2, 'Discharge storage', 0xEF6C00],
-            ]),
-        ], 50);
-        $this->RegisterVariableInteger('REDISPATCH', $this->Translate('Redispatch nearby'), [
-            'PRESENTATION' => VARIABLE_PRESENTATION_ENUMERATION,
-            'ICON'         => 'Factory',
-            'OPTIONS'      => $this->Options([
-                [OnaPayload::UNKNOWN, 'Unknown', -1],
-                [0, 'No', 0x2E7D32],
-                [1, 'Yes', 0xEF6C00],
-            ]),
-        ], 60);
+        $this->RegisterVariableInteger('STORAGE', $this->Translate('Storage recommendation'), $this->StoragePresentation(), 50);
+        $this->RegisterVariableInteger('REDISPATCH', $this->Translate('Redispatch nearby'), $this->RedispatchPresentation(), 60);
         $this->RegisterVariableInteger('REDISPATCH_UNITS', $this->Translate('Redispatch: affected plants'), $this->CountPresentation(), 61);
         $this->RegisterVariableInteger('REDISPATCH_MEASURES', $this->Translate('Redispatch: measures'), $this->CountPresentation(), 62);
         $this->RegisterVariableInteger('REDISPATCH_UPDATED', $this->Translate('Redispatch: data as of'), [
@@ -99,6 +82,11 @@ class OrtsnetzAuslastung extends IPSModuleStrict
             $this->RegisterMessage(0, IPS_KERNELSTARTED);
             return;
         }
+
+        // Darstellung bestehender Variablen nachziehen (bis Build 1: Aufzaehlung, die die Visu ohne Aktion als Zahl zeigte)
+        $this->MaintainVariable('STATUS', $this->Translate('Grid status'), VARIABLETYPE_INTEGER, $this->LightPresentation(), 10, true);
+        $this->MaintainVariable('STORAGE', $this->Translate('Storage recommendation'), VARIABLETYPE_INTEGER, $this->StoragePresentation(), 50, true);
+        $this->MaintainVariable('REDISPATCH', $this->Translate('Redispatch nearby'), VARIABLETYPE_INTEGER, $this->RedispatchPresentation(), 60, true);
 
         // Ampel je Phase nur fuer eingerichtete Phasen
         foreach ([1, 2, 3] as $i) {
@@ -419,45 +407,63 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         return [(int)curl_getinfo($ch, CURLINFO_HTTP_CODE), is_string($response) ? $response : '', curl_error($ch)];
     }
 
+    /*
+     * Ampel, Empfehlung und Redispatch sind reine Anzeigewerte ohne Aktion. Eine Aufzaehlung zeigt die
+     * Kachel-Visu dann als nackte Zahl (0, -1; gesehen 20.10.2026, Symcon 9.1). Deshalb Wertanzeige mit
+     * je einem Intervall pro Zustand: fester Text plus Farbe.
+     */
     private function LightPresentation(): array
     {
-        return [
-            'PRESENTATION' => VARIABLE_PRESENTATION_ENUMERATION,
-            'ICON'         => 'Electricity',
-            'OPTIONS'      => $this->Options([
-                [OnaPayload::UNKNOWN, 'Unknown', -1],
-                [0, 'Green', 0x2E7D32],
-                [1, 'Yellow', 0xF9A825],
-                [2, 'Red', 0xC62828],
-            ]),
-        ];
+        return $this->StatePresentation('Electricity', [
+            [OnaPayload::UNKNOWN, 'Unknown', -1],
+            [0, 'Green', 0x2E7D32],
+            [1, 'Yellow', 0xF9A825],
+            [2, 'Red', 0xC62828],
+        ]);
+    }
+
+    private function StoragePresentation(): array
+    {
+        return $this->StatePresentation('Battery', [
+            [OnaPayload::UNKNOWN, 'Unknown', -1],
+            [0, 'No action', -1],
+            [1, 'Charge storage', 0x2E7D32],
+            [2, 'Discharge storage', 0xEF6C00],
+        ]);
+    }
+
+    private function RedispatchPresentation(): array
+    {
+        return $this->StatePresentation('Factory', [
+            [OnaPayload::UNKNOWN, 'Unknown', -1],
+            [0, 'No', 0x2E7D32],
+            [1, 'Yes', 0xEF6C00],
+        ]);
     }
 
     private function CountPresentation(): array
     {
-        return [
-            'PRESENTATION'     => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
-            'INTERVALS_ACTIVE' => true,
-            'INTERVALS'        => json_encode([[
-                'IntervalMinValue' => OnaPayload::UNKNOWN, 'IntervalMaxValue' => OnaPayload::UNKNOWN,
-                'ConstantActive' => true, 'ConstantValue' => $this->Translate('Unknown'), 'ConversionFactor' => 1,
-                'PrefixActive' => false, 'PrefixValue' => '', 'SuffixActive' => false, 'SuffixValue' => '',
-                'DigitsActive' => false, 'DigitsValue' => 0, 'IconActive' => false, 'IconValue' => '',
-                'ColorActive' => false, 'ColorValue' => -1, 'ContentColorActive' => false, 'ContentColorValue' => -1,
-            ]], JSON_UNESCAPED_UNICODE),
-        ];
+        return $this->StatePresentation('', [[OnaPayload::UNKNOWN, 'Unknown', -1]]);
     }
 
-    /**
-     * Optionen einer Aufzaehlung. Symcon 9.1 nimmt hier nur Value, Caption, IconActive, IconValue und Color
-     * (ColorActive/ColorValue der Wertanzeige lehnt es ab, gemessen 20.10.2026).
-     *
-     * @param list<array{0:int, 1:string, 2:int}> $rows
-     */
-    private function Options(array $rows): string
+    /** @param list<array{0:int, 1:string, 2:int}> $rows Wert, Text (wird uebersetzt), Farbe (-1 = keine) */
+    private function StatePresentation(string $icon, array $rows): array
     {
-        return (string)json_encode(array_map(fn (array $r): array => [
-            'Value' => $r[0], 'Caption' => $this->Translate($r[1]), 'IconActive' => false, 'IconValue' => '', 'Color' => $r[2],
-        ], $rows), JSON_UNESCAPED_UNICODE);
+        $intervals = array_map(fn (array $r): array => [
+            'IntervalMinValue' => $r[0], 'IntervalMaxValue' => $r[0],
+            'ConstantActive' => true, 'ConstantValue' => $this->Translate($r[1]), 'ConversionFactor' => 1,
+            'PrefixActive' => false, 'PrefixValue' => '', 'SuffixActive' => false, 'SuffixValue' => '',
+            'DigitsActive' => false, 'DigitsValue' => 0, 'IconActive' => false, 'IconValue' => '',
+            'ColorActive' => $r[2] >= 0, 'ColorValue' => $r[2], 'ContentColorActive' => false, 'ContentColorValue' => -1,
+        ], $rows);
+        $p = [
+            'PRESENTATION'     => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+            'INTERVALS_ACTIVE' => true,
+            'INTERVALS'        => json_encode($intervals, JSON_UNESCAPED_UNICODE),
+        ];
+        if ($icon !== '') {
+            $p['ICON'] = $icon;
+        }
+        return $p;
     }
 }
