@@ -243,8 +243,8 @@ class OrtsnetzAuslastung extends IPSModuleStrict
     {
         $this->SetBuffer('LiveHash', '');
         $html = (string)file_get_contents(__DIR__ . '/module.html');
-        // Startzustand wie ein Update; doppelt kodiert = sicheres JS-Stringliteral, HEX_TAG gegen "</script>" in Texten
-        return $html . '<script>handleMessage(' . json_encode($this->Json($this->TileState()), JSON_HEX_TAG) . ');</script>';
+        // Startzustand als Objekt (handleMessage nimmt Objekt und Text); HEX_TAG gegen "</script>" in Texten
+        return $html . '<script>handleMessage(' . $this->Json($this->TileState()) . ');</script>';
     }
 
     public function GetConfigurationForm(): string
