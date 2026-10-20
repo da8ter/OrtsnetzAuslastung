@@ -51,7 +51,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
 
         $this->RegisterTimer('Upload', 0, 'ONA_Upload($_IPS[\'TARGET\']);');
 
-        // HTML-Kachel, ab 9.1 auch maximiert (aeltere Versionen kennen die Konstante nicht)
+        // HTML-Kachel, wo verfuegbar auch maximiert (aeltere Versionen kennen die Konstante nicht)
         $this->SetVisualizationType(defined('INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN') ? INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN : 1);
 
         $this->RegisterVariableInteger('STATUS', $this->Translate('Grid status'), $this->LightPresentation(), 10);
@@ -537,7 +537,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
 
     /*
      * Ampel, Empfehlung und Redispatch sind reine Anzeigewerte ohne Aktion. Eine Aufzaehlung zeigt die
-     * Kachel-Visu dann als nackte Zahl (0, -1; gesehen 20.10.2026, Symcon 9.1). Deshalb Wertanzeige mit
+     * Kachel-Visu dann als nackte Zahl (0, -1; gesehen 20.10.2026). Deshalb Wertanzeige mit
      * je einem Intervall pro Zustand: fester Text plus Farbe.
      */
     private function LightPresentation(): array
