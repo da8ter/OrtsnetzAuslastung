@@ -1,5 +1,7 @@
 # Ortsnetz-Auslastung
 
+![Ortsnetz-Auslastung — Kachel](https://raw.githubusercontent.com/da8ter/images/main/Ortsnetz-Auslastung%20Kachel.png)
+
 Sendet die im Haus gemessene Netzspannung alle 5 Minuten an [ortsnetz-auslastung.de](https://www.ortsnetz-auslastung.de) und zeigt die Antwort des Dienstes als Variablen: Netzampel je Phase und gesamt, Empfehlung für den Batteriespeicher und Redispatch-Maßnahmen in der Umgebung.
 
 Grundlage ist die öffentliche API des Projekts [datenerfassung-ortsnetz-auslastung](https://github.com/thomaslehmann1234/datenerfassung-ortsnetz-auslastung) (`POST /v1/measurements`, kein API-Schlüssel).
@@ -89,6 +91,10 @@ Ins Meldungsfenster schreibt das Modul nur beim Wechsel in einen Fehler, nicht a
 Die Speicherempfehlung leitet der Dienst aus der gesendeten Messung ab: „Speicher entladen“, wenn eine Phase unter ihrer unteren Warnschwelle liegt, „Speicher laden“, wenn eine über der oberen liegt. Damit lässt sich z. B. ein Batteriespeicher netzdienlich steuern.
 
 ### 6. Visualisierung
+
+![Ortsnetz-Auslastung — Vollbild](https://raw.githubusercontent.com/da8ter/images/main/Ortsnetz-Auslastung%20Vollbild.png)
+
+![Ortsnetz-Auslastung — Smartphone](https://raw.githubusercontent.com/da8ter/images/main/Ortsnetz-Auslastung%20Smartphone.png)
 
 Die Instanz bringt eine eigene HTML-Kachel mit (ab Symcon 9.1 auch maximiert):
 
