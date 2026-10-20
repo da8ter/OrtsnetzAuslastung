@@ -54,8 +54,8 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         $this->RegisterVariableInteger('STATUS', $this->Translate('Grid status'), $this->LightPresentation(), 10);
         $this->RegisterVariableInteger('STORAGE', $this->Translate('Storage recommendation'), $this->StoragePresentation(), 50);
         $this->RegisterVariableInteger('REDISPATCH', $this->Translate('Redispatch nearby'), $this->RedispatchPresentation(), 60);
-        $this->RegisterVariableInteger('REDISPATCH_UNITS', $this->Translate('Redispatch: affected plants'), $this->CountPresentation(), 61);
-        $this->RegisterVariableInteger('REDISPATCH_MEASURES', $this->Translate('Redispatch: measures'), $this->CountPresentation(), 62);
+        $this->RegisterVariableInteger('REDISPATCH_UNITS', $this->Translate('Redispatch: affected plants'), $this->CountPresentation('EnergyProduction'), 61);
+        $this->RegisterVariableInteger('REDISPATCH_MEASURES', $this->Translate('Redispatch: measures'), $this->CountPresentation('Warning'), 62);
         $this->RegisterVariableInteger('REDISPATCH_UPDATED', $this->Translate('Redispatch: data as of'), [
             'PRESENTATION' => VARIABLE_PRESENTATION_DATE_TIME,
         ], 63);
@@ -87,6 +87,16 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         $this->MaintainVariable('STATUS', $this->Translate('Grid status'), VARIABLETYPE_INTEGER, $this->LightPresentation(), 10, true);
         $this->MaintainVariable('STORAGE', $this->Translate('Storage recommendation'), VARIABLETYPE_INTEGER, $this->StoragePresentation(), 50, true);
         $this->MaintainVariable('REDISPATCH', $this->Translate('Redispatch nearby'), VARIABLETYPE_INTEGER, $this->RedispatchPresentation(), 60, true);
+        $this->MaintainVariable('REDISPATCH_UNITS', $this->Translate('Redispatch: affected plants'), VARIABLETYPE_INTEGER, $this->CountPresentation('EnergyProduction'), 61, true);
+        $this->MaintainVariable('REDISPATCH_MEASURES', $this->Translate('Redispatch: measures'), VARIABLETYPE_INTEGER, $this->CountPresentation('Warning'), 62, true);
+        // Datum/Uhrzeit nimmt kein ICON in der Darstellung ("nicht definiert", gemessen 20.10.2026): Objekt-Icon setzen,
+        // ein vom Nutzer gewaehltes bleibt
+        foreach (['REDISPATCH_UPDATED' => 'Clock', 'LAST_UPLOAD' => 'Cloud'] as $ident => $icon) {
+            $id = @IPS_GetObjectIDByIdent($ident, $this->InstanceID);
+            if (is_int($id) && IPS_GetObject($id)['ObjectIcon'] === '') {
+                IPS_SetIcon($id, $icon);
+            }
+        }
 
         // Ampel je Phase nur fuer eingerichtete Phasen
         foreach ([1, 2, 3] as $i) {
@@ -441,9 +451,9 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         ]);
     }
 
-    private function CountPresentation(): array
+    private function CountPresentation(string $icon): array
     {
-        return $this->StatePresentation('', [[OnaPayload::UNKNOWN, 'Unknown', -1]]);
+        return $this->StatePresentation($icon, [[OnaPayload::UNKNOWN, 'Unknown', -1]]);
     }
 
     /** @param list<array{0:int, 1:string, 2:int}> $rows Wert, Text (wird uebersetzt), Farbe (-1 = keine) */

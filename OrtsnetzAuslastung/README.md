@@ -81,7 +81,7 @@ Ins Meldungsfenster schreibt das Modul nur beim Wechsel in einen Fehler, nicht a
 | REDISPATCH | Redispatch in der Umgebung | Integer | Unbekannt (-1), Nein (0), Ja (1): mindestens drei Anlagen und zwei Maßnahmen im Umkreis von 50 km in der letzten Stunde |
 | REDISPATCH_UNITS | Redispatch: betroffene Anlagen | Integer | Anzahl, -1 = unbekannt |
 | REDISPATCH_MEASURES | Redispatch: Maßnahmen | Integer | Anzahl, -1 = unbekannt |
-| REDISPATCH_UPDATED | Redispatch: Datenstand | Integer (Datum/Uhrzeit) | Stand der Redispatch-Daten des Dienstes |
+| REDISPATCH_UPDATED | Redispatch: Datenstand | Integer (Datum/Uhrzeit) | Stand der Redispatch-Daten des Dienstes (Objekt-Icon, da Datum/Uhrzeit kein Darstellungs-Icon kennt) |
 | LAST_UPLOAD | Letzte Übertragung | Integer (Datum/Uhrzeit) | Zeit der letzten angenommenen Messung |
 | LAST_MESSAGE | Letzte Meldung | String | Ergebnis des letzten Versuchs, bei Ablehnung mit der Begründung des Dienstes |
 
