@@ -96,7 +96,8 @@
             "Range of the current interval": "Spanne im laufenden Intervall",
             "Normal": "Normal",
             "Warning": "Warnung",
-            "Critical": "Kritisch"
+            "Critical": "Kritisch",
+            "Grid frequency": "Netzfrequenz"
         },
         "en": {
             "Ortsnetz Auslastung": "Ortsnetz-Auslastung"

@@ -82,6 +82,34 @@
     .phase.aus { opacity: .45; }
     .phase.aus .punkt, .phase.aus .band { display: none; }
 
+    /* Frequenz: rundes Instrument, nur wo Platz ist */
+    .mitte { display: flex; flex-direction: column; gap: 12px; }
+    .frequenz { display: none; align-self: center; text-align: center; }
+    .frequenz svg { width: 100%; max-width: 240px; display: block; margin: 0 auto; overflow: visible; }
+    .frequenz .bogen { fill: none; stroke-linecap: round; }
+    .frequenz .grund { stroke: var(--surface); stroke-width: 14; }
+    .frequenz .zone { stroke-width: 14; opacity: .28; stroke-linecap: butt; }
+    .frequenz .wertbogen { stroke-width: 14; stroke: var(--c); transition: d .6s; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--c) 50%, transparent)); }
+    .frequenz .spanne { stroke-width: 3; stroke: var(--c); opacity: .7; }
+    .frequenz .zeiger { fill: var(--fg); stroke: color-mix(in srgb, var(--c) 70%, #000); stroke-width: 2; }
+    .frequenz .strich { stroke: var(--muted); stroke-width: 1.5; }
+    .frequenz .marke { fill: var(--muted); font-size: 10px; font-weight: 600; }
+    .frequenz .zahl { fill: var(--fg); font-size: 27px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .frequenz .einheit { fill: var(--muted); font-size: 12px; font-weight: 600; }
+    .frequenz .abw { fill: var(--c); font-size: 12px; font-weight: 700; }
+    .frequenz .titel { color: var(--muted); font-size: .8em; font-weight: 600; margin-top: 4px; }
+    .f-0 { --c: var(--green); } .f-1 { --c: var(--yellow); } .f-2 { --c: var(--red); } .f--1 { --c: var(--unknown); }
+    @container (min-height: 560px) and (max-width: 619px) {
+        .frequenz { display: block; width: 78%; max-width: 260px; }
+        .chip.hz { display: none; }
+    }
+    @container (min-height: 380px) and (min-width: 620px) {
+        .mitte { flex-direction: row; align-items: center; gap: 18px; }
+        .mitte .phasen { flex: 1 1 auto; min-width: 0; }
+        .frequenz { display: block; flex: 0 0 230px; }
+        .chip.hz { display: none; }
+    }
+
     /* Fuss */
     .fuss { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip {
@@ -167,7 +195,10 @@
         </div>
     </div>
     <div class="hinweis" id="hinweis"></div>
-    <div class="phasen" id="phasen"></div>
+    <div class="mitte">
+        <div class="phasen" id="phasen"></div>
+        <div class="frequenz f--1" id="frequenz"></div>
+    </div>
     <div class="fuss" id="fuss"></div>
 </div>
 <script>
@@ -236,7 +267,7 @@
             c.push('<span class="chip">' + ICONS.bolt + esc(t(bezug ? 'Import' : 'Export')) + ' ' + num(Math.abs(state.power) >= 1000 ? Math.abs(state.power) / 1000 : Math.abs(state.power), Math.abs(state.power) >= 1000 ? 2 : 0) + (Math.abs(state.power) >= 1000 ? ' kW' : ' W') + '</span>');
         }
         if (typeof state.f === 'number') {
-            c.push('<span class="chip neben">' + ICONS.wave + num(state.f, 2) + ' Hz</span>');
+            c.push('<span class="chip neben hz">' + ICONS.wave + num(state.f, 2) + ' Hz</span>');
         }
         var st = state.storage === undefined ? -1 : state.storage;
         c.push('<span class="chip ' + (st === 1 ? 'laden' : st === 2 ? 'entladen' : '') + '">' + ICONS.battery + (st === 1 || st === 2 ? '<span class="dot"></span>' : '') + esc(t('storage' + st)) + '</span>');
@@ -247,7 +278,52 @@
         document.getElementById('fuss').innerHTML = c.join('');
     }
 
-    function render() { renderKopf(); renderPhasen(); renderFuss(); }
+    /* Frequenz-Instrument: 240°-Bogen von 49,75 bis 50,25 Hz */
+    var F_MIN = 49.75, F_MAX = 50.25, F_SPAN = 240;
+    function fWinkel(f) { return -F_SPAN / 2 + (Math.max(F_MIN, Math.min(F_MAX, f)) - F_MIN) / (F_MAX - F_MIN) * F_SPAN; }
+    function punkt(w, r) { var a = (w - 90) * Math.PI / 180; return [100 + r * Math.cos(a), 100 + r * Math.sin(a)]; }
+    function bogen(w1, w2, r) {
+        if (w2 < w1) { var x = w1; w1 = w2; w2 = x; }
+        if (w2 - w1 < 0.01) { w2 = w1 + 0.01; }
+        var p1 = punkt(w1, r), p2 = punkt(w2, r);
+        return 'M' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2) + ' A' + r + ' ' + r + ' 0 ' + (w2 - w1 > 180 ? 1 : 0) + ' 1 ' + p2[0].toFixed(2) + ' ' + p2[1].toFixed(2);
+    }
+    function fStufe(f) { var d = Math.abs(f - 50); return d <= 0.05 ? 0 : d <= 0.2 ? 1 : 2; }
+
+    function renderFrequenz() {
+        var box = document.getElementById('frequenz');
+        var f = typeof state.f === 'number' ? state.f : null;
+        box.className = 'frequenz f-' + (f === null ? -1 : fStufe(f));
+        var R = 78, svg = '<svg viewBox="0 0 200 176" role="img" aria-label="' + esc(t('Grid frequency')) + '">';
+        svg += '<path class="bogen grund" d="' + bogen(-F_SPAN / 2, F_SPAN / 2, R) + '"/>';
+        [[49.75, 49.8, 'var(--red)'], [49.8, 49.95, 'var(--yellow)'], [49.95, 50.05, 'var(--green)'], [50.05, 50.2, 'var(--yellow)'], [50.2, 50.25, 'var(--red)']].forEach(function (z) {
+            svg += '<path class="bogen zone" stroke="' + z[2] + '" d="' + bogen(fWinkel(z[0]), fWinkel(z[1]), R) + '"/>';
+        });
+        [49.8, 49.9, 50, 50.1, 50.2].forEach(function (m) {
+            var w = fWinkel(m), a = punkt(w, R - 11), b = punkt(w, R - 17), l = punkt(w, R - 33);
+            svg += '<line class="strich" x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '"/>';
+            if (m !== 49.9 && m !== 50.1) {
+                svg += '<text class="marke" text-anchor="middle" dominant-baseline="middle" x="' + l[0].toFixed(1) + '" y="' + l[1].toFixed(1) + '">' + num(m, 1) + '</text>';
+            }
+        });
+        if (typeof state.fmin === 'number' && typeof state.fmax === 'number' && state.fmax > state.fmin) {
+            svg += '<path class="bogen spanne" d="' + bogen(fWinkel(state.fmin), fWinkel(state.fmax), R + 12) + '"/>';
+        }
+        if (f !== null) {
+            svg += '<path class="bogen wertbogen" d="' + bogen(fWinkel(50), fWinkel(f), R) + '"/>';
+            var z = punkt(fWinkel(f), R);
+            svg += '<circle class="zeiger" cx="' + z[0].toFixed(1) + '" cy="' + z[1].toFixed(1) + '" r="8"/>';
+            var mhz = Math.round((f - 50) * 1000);
+            svg += '<text class="zahl" text-anchor="middle" x="100" y="136">' + num(f, 3) + '</text>'
+                + '<text class="einheit" text-anchor="middle" x="100" y="152">Hz</text>'
+                + '<text class="abw" text-anchor="middle" x="100" y="170">' + (mhz > 0 ? '+' : mhz < 0 ? '−' : '±') + Math.abs(mhz) + ' mHz</text>';
+        } else {
+            svg += '<text class="zahl" text-anchor="middle" x="100" y="110">–</text>';
+        }
+        box.innerHTML = svg + '</svg><div class="titel">' + esc(t('Grid frequency')) + '</div>';
+    }
+
+    function render() { renderKopf(); renderPhasen(); renderFrequenz(); renderFuss(); }
 
     function handleMessage(data) {
         var u;
@@ -258,7 +334,7 @@
             (u.live.phases || []).forEach(function (np) {
                 (state.phases || []).forEach(function (op) { if (op.n === np.n) { Object.assign(op, np); } });
             });
-            ['f', 'power'].forEach(function (k) { if (k in u.live) { state[k] = u.live[k]; } });
+            ['f', 'fmin', 'fmax', 'power'].forEach(function (k) { if (k in u.live) { state[k] = u.live[k]; } });
         } else {
             Object.assign(state, u);
         }

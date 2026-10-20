@@ -440,6 +440,14 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         return $phases;
     }
 
+    /** @return array{0:?float, 1:?float} Minimum und Maximum der Frequenz im laufenden Intervall */
+    private function FrequencyRange(): array
+    {
+        $stats = json_decode($this->GetBuffer('Stats'), true);
+        $s = is_array($stats) ? ($stats['f'] ?? null) : null;
+        return is_array($s) ? [(float)$s[0], (float)$s[1]] : [null, null];
+    }
+
     private function TileState(): array
     {
         $phases = $this->LivePhases();
@@ -456,7 +464,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
             'redispatch-1' => 'Redispatch: unknown', 'redispatch0' => 'No redispatch', 'redispatch1' => 'Redispatch nearby',
             'measures' => 'measures', 'Import' => 'Import', 'Export' => 'Export', 'Last upload' => 'Last upload', 'never' => 'never',
             'just now' => 'just now', '%d min ago' => '%d min ago', 'Sending is switched off' => 'Sending is switched off',
-            'Range of the current interval' => 'Range of the current interval',
+            'Range of the current interval' => 'Range of the current interval', 'Grid frequency' => 'Grid frequency',
         ] as $k => $text) {
             $t[$k] = $this->Translate($text);
         }
@@ -467,6 +475,8 @@ class OrtsnetzAuslastung extends IPSModuleStrict
             'overall'    => (int)$this->GetValue('STATUS'),
             'phases'     => $phases,
             'f'          => $this->Read($this->ReadPropertyInteger('Frequency')),
+            'fmin'       => $this->FrequencyRange()[0],
+            'fmax'       => $this->FrequencyRange()[1],
             'power'      => $this->GridPower(),
             'storage'    => (int)$this->GetValue('STORAGE'),
             'redispatch' => (int)$this->GetValue('REDISPATCH'),
@@ -487,7 +497,8 @@ class OrtsnetzAuslastung extends IPSModuleStrict
     private function PushLive(): void
     {
         $live = ['live' => ['phases' => array_map(fn (array $p): array => array_diff_key($p, ['on' => 0]), $this->LivePhases()),
-            'f' => $this->Read($this->ReadPropertyInteger('Frequency')), 'power' => $this->GridPower()]];
+            'f' => $this->Read($this->ReadPropertyInteger('Frequency')), 'fmin' => $this->FrequencyRange()[0],
+            'fmax' => $this->FrequencyRange()[1], 'power' => $this->GridPower()]];
         $json = $this->Json($live);
         if (md5($json) === $this->GetBuffer('LiveHash')) {
             return;

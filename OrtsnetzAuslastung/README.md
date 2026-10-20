@@ -94,7 +94,8 @@ Die Instanz bringt eine eigene HTML-Kachel mit (ab Symcon 9.1 auch maximiert):
 
 * oben die Gesamtampel mit Klartext und der Zeit der letzten Übertragung,
 * je Phase die aktuelle Spannung auf einer Skala von 207 bis 253 V (230 V ± 10 %), farbig nach der Bewertung des Dienstes, dazu die Spanne aus Minimum und Maximum des laufenden Intervalls und der Strom,
-* unten Netzleistung (Bezug/Einspeisung), Frequenz, Speicherempfehlung und Redispatch.
+* die Netzfrequenz als rundes Instrument (49,75–50,25 Hz; grün bis ±50 mHz, gelb bis ±200 mHz, rot darüber) mit Abweichung in mHz und der Spanne des laufenden Intervalls – maximiert auf dem Handy unter den Phasen, im breiten Vollbild daneben, in kleineren Kacheln als Chip,
+* unten Netzleistung (Bezug/Einspeisung), Speicherempfehlung und Redispatch.
 
 Spannung, Strom, Leistung und Frequenz folgen live den Quellvariablen; die Bewertung wechselt mit jeder Antwort des Dienstes. Die Kachel passt sich der Größe an: 2×1 zeigt die drei Spannungen nebeneinander, 1×1 nur Ampel und Spannungen, maximiert größere Werte mit Skalenbeschriftung.
 
