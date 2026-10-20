@@ -53,7 +53,7 @@
     .kopf .unter { color: var(--muted); font-size: .85em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Phasen */
-    .phasen { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-height: 0; justify-content: center; }
+    .phasen { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
     .phase {
         display: grid; grid-template-columns: 2.2em 1fr auto; align-items: center; gap: 10px;
         background: var(--surface); border-radius: 12px; padding: 8px 12px;
@@ -134,7 +134,7 @@
         #wurzel { gap: 18px; }
         .ampel { width: 46px; height: 46px; }
         .kopf .zustand { font-size: 1.5em; }
-        .phasen { justify-content: flex-start; gap: 12px; }
+        .phasen { gap: 12px; }
         .phase { padding: 14px 18px; grid-template-columns: 2.6em 1fr auto; gap: 18px; }
         .phase .name { font-size: 1.15em; }
         .phase .wert { font-size: 1.7em; }
