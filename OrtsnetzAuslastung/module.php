@@ -51,6 +51,9 @@ class OrtsnetzAuslastung extends IPSModuleStrict
 
         $this->RegisterTimer('Upload', 0, 'ONA_Upload($_IPS[\'TARGET\']);');
 
+        // HTML-Kachel, ab 9.1 auch maximiert (aeltere Versionen kennen die Konstante nicht)
+        $this->SetVisualizationType(defined('INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN') ? INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN : 1);
+
         $this->RegisterVariableInteger('STATUS', $this->Translate('Grid status'), $this->LightPresentation(), 10);
         $this->RegisterVariableInteger('STORAGE', $this->Translate('Storage recommendation'), $this->StoragePresentation(), 50);
         $this->RegisterVariableInteger('REDISPATCH', $this->Translate('Redispatch nearby'), $this->RedispatchPresentation(), 60);
@@ -117,6 +120,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         if (!$this->ReadPropertyBoolean('Active')) {
             $this->SetTimerInterval('Upload', 0);
             $this->SetStatus(IS_INACTIVE);
+            $this->PushTile();
             return;
         }
         [$lat, $lon] = $this->Location();
@@ -133,6 +137,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         $this->ScheduleNext();
         // Neue Einrichtung: das Ergebnis des naechsten Uploads entscheidet ueber den Status
         $this->SetStatus(IS_ACTIVE);
+        $this->PushTile();
     }
 
     public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
@@ -141,7 +146,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
             $this->ApplyChanges();
             return;
         }
-        if ($Message !== VM_UPDATE || !$this->ReadPropertyBoolean('MinMaxAvg')) {
+        if ($Message !== VM_UPDATE) {
             return;
         }
         $watch = json_decode($this->GetBuffer('Watch'), true);
@@ -149,9 +154,12 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         if (!is_string($key) || !is_numeric($Data[0] ?? null)) {
             return;
         }
-        $this->WithStats(function (array $stats) use ($key, $Data): array {
-            return OnaPayload::AddSample($stats, $key, (float)$Data[0]);
-        });
+        if (in_array($key, ['l1', 'l2', 'l3', 'f'], true) && $this->ReadPropertyBoolean('MinMaxAvg')) {
+            $this->WithStats(function (array $stats) use ($key, $Data): array {
+                return OnaPayload::AddSample($stats, $key, (float)$Data[0]);
+            });
+        }
+        $this->PushLive();
     }
 
     /** Eine Messung senden (Timer alle 5 Minuten oder Knopf). Liefert das Ergebnis als Text. */
@@ -231,6 +239,14 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         return $text;
     }
 
+    public function GetVisualizationTile(): string
+    {
+        $this->SetBuffer('LiveHash', '');
+        $html = (string)file_get_contents(__DIR__ . '/module.html');
+        // Startzustand wie ein Update; doppelt kodiert = sicheres JS-Stringliteral, HEX_TAG gegen "</script>" in Texten
+        return $html . '<script>handleMessage(' . json_encode($this->Json($this->TileState()), JSON_HEX_TAG) . ');</script>';
+    }
+
     public function GetConfigurationForm(): string
     {
         $form = json_decode((string)file_get_contents(__DIR__ . '/form.json'), true);
@@ -257,12 +273,7 @@ class OrtsnetzAuslastung extends IPSModuleStrict
                 return [['ok' => false, 'error' => 'Measured values are stale', 'payload' => [], 'notes' => []], ''];
             }
         }
-        $power = $this->Read($this->ReadPropertyInteger('GridPower'));
-        if ($power !== null) {
-            $power *= max(1, $this->ReadPropertyInteger('GridPowerFactor'));
-            // API: Bezug positiv, Einspeisung negativ
-            $power = $this->ReadPropertyBoolean('GridPowerInvert') ? -$power : $power;
-        }
+        $power = $this->GridPower();
         $static = [
             'plant_capacity_kwp' => $this->ReadPropertyFloat('PlantCapacity'),
             'battery_capacity'   => $this->ReadPropertyFloat('BatteryCapacity'),
@@ -340,14 +351,16 @@ class OrtsnetzAuslastung extends IPSModuleStrict
             }
         }
         $watch = [];
-        $keys = ['VoltageL1' => 'l1', 'VoltageL2' => 'l2', 'VoltageL3' => 'l3', 'Frequency' => 'f'];
+        // Spannung/Frequenz fuer die Statistik, dazu Strom und Netzleistung fuer die Live-Anzeige der Kachel
+        $keys = ['VoltageL1' => 'l1', 'VoltageL2' => 'l2', 'VoltageL3' => 'l3', 'Frequency' => 'f',
+            'CurrentL1' => 'a1', 'CurrentL2' => 'a2', 'CurrentL3' => 'a3', 'GridPower' => 'p'];
         foreach (['VoltageL1', 'VoltageL2', 'VoltageL3', 'Frequency', 'CurrentL1', 'CurrentL2', 'CurrentL3', 'GridPower', 'BatterySOC', 'PVForecast'] as $prop) {
             $id = $this->ReadPropertyInteger($prop);
             if ($id <= 0 || !IPS_VariableExists($id)) {
                 continue;
             }
             $this->RegisterReference($id);
-            if (isset($keys[$prop]) && $this->ReadPropertyBoolean('MinMaxAvg')) {
+            if (isset($keys[$prop])) {
                 $this->RegisterMessage($id, VM_UPDATE);
                 $watch[(string)$id] = $keys[$prop];
             }
@@ -391,7 +404,101 @@ class OrtsnetzAuslastung extends IPSModuleStrict
         }
         $this->SetStatus($status);
         $this->SetValue('LAST_MESSAGE', $message);
+        $this->PushTile();
         return $message;
+    }
+
+    /** Netzleistung in W mit Vorzeichen der API (Bezug positiv); null ohne Quelle. */
+    private function GridPower(): ?float
+    {
+        $power = $this->Read($this->ReadPropertyInteger('GridPower'));
+        if ($power === null) {
+            return null;
+        }
+        $power *= max(1, $this->ReadPropertyInteger('GridPowerFactor'));
+        return $this->ReadPropertyBoolean('GridPowerInvert') ? -$power : $power;
+    }
+
+    // ---------------------------------------------------------------- Kachel
+
+    /** Live-Werte je Phase: Spannung, Strom und Spanne des laufenden Intervalls. */
+    private function LivePhases(): array
+    {
+        $stats = json_decode($this->GetBuffer('Stats'), true);
+        $stats = is_array($stats) ? $stats : [];
+        $phases = [];
+        foreach ([1, 2, 3] as $i) {
+            $s = $stats['l' . $i] ?? null;
+            $phases[] = [
+                'n'   => $i,
+                'v'   => $this->Read($this->ReadPropertyInteger('VoltageL' . $i)),
+                'a'   => ($a = $this->Read($this->ReadPropertyInteger('CurrentL' . $i))) === null ? null : abs($a),
+                'min' => is_array($s) ? (float)$s[0] : null,
+                'max' => is_array($s) ? (float)$s[1] : null,
+            ];
+        }
+        return $phases;
+    }
+
+    private function TileState(): array
+    {
+        $phases = $this->LivePhases();
+        foreach ($phases as &$p) {
+            $p['on'] = $this->ReadPropertyInteger('VoltageL' . $p['n']) > 0;
+            $p['s'] = $p['on'] ? (int)$this->GetValue('STATUS_L' . $p['n']) : OnaPayload::UNKNOWN;
+        }
+        unset($p);
+        $t = [];
+        foreach ([
+            'overall-1' => 'No assessment yet', 'overall0' => 'Grid voltage normal', 'overall1' => 'Grid voltage in warning range', 'overall2' => 'Grid voltage critical',
+            'short-1' => 'Unknown', 'short0' => 'Normal', 'short1' => 'Warning', 'short2' => 'Critical',
+            'storage-1' => 'Storage: unknown', 'storage0' => 'Storage: no action', 'storage1' => 'Charge storage', 'storage2' => 'Discharge storage',
+            'redispatch-1' => 'Redispatch: unknown', 'redispatch0' => 'No redispatch', 'redispatch1' => 'Redispatch nearby',
+            'measures' => 'measures', 'Import' => 'Import', 'Export' => 'Export', 'Last upload' => 'Last upload', 'never' => 'never',
+            'just now' => 'just now', '%d min ago' => '%d min ago', 'Sending is switched off' => 'Sending is switched off',
+            'Range of the current interval' => 'Range of the current interval',
+        ] as $k => $text) {
+            $t[$k] = $this->Translate($text);
+        }
+        return [
+            'active'     => $this->ReadPropertyBoolean('Active'),
+            'code'       => $this->GetStatus(),
+            'message'    => (string)$this->GetValue('LAST_MESSAGE'),
+            'overall'    => (int)$this->GetValue('STATUS'),
+            'phases'     => $phases,
+            'f'          => $this->Read($this->ReadPropertyInteger('Frequency')),
+            'power'      => $this->GridPower(),
+            'storage'    => (int)$this->GetValue('STORAGE'),
+            'redispatch' => (int)$this->GetValue('REDISPATCH'),
+            'units'      => (int)$this->GetValue('REDISPATCH_UNITS'),
+            'measures'   => (int)$this->GetValue('REDISPATCH_MEASURES'),
+            'last'       => (int)$this->GetValue('LAST_UPLOAD'),
+            't'          => $t,
+        ];
+    }
+
+    private function PushTile(): void
+    {
+        $this->SetBuffer('LiveHash', '');
+        $this->UpdateVisualizationValue($this->Json($this->TileState()));
+    }
+
+    /** Nur senden, wenn sich ein Live-Wert geaendert hat (Symcon meldet jede Aktualisierung). */
+    private function PushLive(): void
+    {
+        $live = ['live' => ['phases' => array_map(fn (array $p): array => array_diff_key($p, ['on' => 0]), $this->LivePhases()),
+            'f' => $this->Read($this->ReadPropertyInteger('Frequency')), 'power' => $this->GridPower()]];
+        $json = $this->Json($live);
+        if (md5($json) === $this->GetBuffer('LiveHash')) {
+            return;
+        }
+        $this->SetBuffer('LiveHash', md5($json));
+        $this->UpdateVisualizationValue($json);
+    }
+
+    private function Json(array $data): string
+    {
+        return (string)json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
     private function IntegrationVersion(): string

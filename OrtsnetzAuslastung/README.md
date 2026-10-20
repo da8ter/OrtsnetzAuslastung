@@ -22,6 +22,7 @@ Grundlage ist die öffentliche API des Projekts [datenerfassung-ortsnetz-auslast
 * Optional: Netzfrequenz, Ströme je Phase, Netzleistung am Hausanschluss (W oder kW, Vorzeichen umkehrbar), Ladezustand des Speichers, PV-Prognose für heute.
 * Angaben zur Anlage (PV-Größe in kWp, nutzbare Speicherkapazität, Messgerät) gehen nur nach Einrichtung, Änderung und Neustart mit, wie es die API vorsieht.
 * Prüft vor dem Senden: Eine gewählte Spannungsvariable mit unplausiblem Wert (nicht 0–500 V) oder ohne Aktualisierung seit 15 Minuten verhindert das Senden. So landen keine Werte eines ausgefallenen Zählers beim Dienst.
+* Eigene HTML-Kachel mit Netzampel, Spannung je Phase auf einer Skala, Intervallspanne und Speicherempfehlung (siehe [Visualisierung](#6-visualisierung)).
 * Standort aus der Instanz oder, wenn leer, aus dem Standort des Symcon-Systems; gerundet auf etwa 1 km, 100 m (Vorgabe) oder 10 m.
 
 ### 2. Voraussetzungen
@@ -89,7 +90,13 @@ Die Speicherempfehlung leitet der Dienst aus der gesendeten Messung ab: „Speic
 
 ### 6. Visualisierung
 
-Die Variablen erscheinen mit ihren Darstellungen (Ampelfarben) in der Kachel-Visualisierung.
+Die Instanz bringt eine eigene HTML-Kachel mit (ab Symcon 9.1 auch maximiert):
+
+* oben die Gesamtampel mit Klartext und der Zeit der letzten Übertragung,
+* je Phase die aktuelle Spannung auf einer Skala von 207 bis 253 V (230 V ± 10 %), farbig nach der Bewertung des Dienstes, dazu die Spanne aus Minimum und Maximum des laufenden Intervalls und der Strom,
+* unten Netzleistung (Bezug/Einspeisung), Frequenz, Speicherempfehlung und Redispatch.
+
+Spannung, Strom, Leistung und Frequenz folgen live den Quellvariablen; die Bewertung wechselt mit jeder Antwort des Dienstes. Die Kachel passt sich der Größe an: 2×1 zeigt die drei Spannungen nebeneinander, 1×1 nur Ampel und Spannungen, maximiert größere Werte mit Skalenbeschriftung.
 
 ### 7. PHP-Befehlsreferenz
 

@@ -78,7 +78,25 @@
             "Location sent: %s, %s (%s)": "Gesendeter Standort: %s, %s (%s)",
             "location of the Symcon system": "Standort des Symcon-Systems",
             "location of this instance": "Standort dieser Instanz",
-            "No location: choose one here or set the location of the Symcon system (Location Control).": "Kein Standort: hier wählen oder den Standort des Symcon-Systems setzen (Location Control)."
+            "No location: choose one here or set the location of the Symcon system (Location Control).": "Kein Standort: hier wählen oder den Standort des Symcon-Systems setzen (Location Control).",
+            "No assessment yet": "Noch keine Bewertung",
+            "Grid voltage normal": "Netzspannung im Normalbereich",
+            "Grid voltage in warning range": "Netzspannung im Warnbereich",
+            "Grid voltage critical": "Netzspannung kritisch",
+            "Storage: unknown": "Speicher: unbekannt",
+            "Storage: no action": "Speicher: keine Aktion",
+            "Redispatch: unknown": "Redispatch: unbekannt",
+            "No redispatch": "Kein Redispatch",
+            "measures": "Maßnahmen",
+            "Import": "Bezug",
+            "Export": "Einspeisung",
+            "never": "noch nie",
+            "just now": "gerade eben",
+            "%d min ago": "vor %d Min.",
+            "Range of the current interval": "Spanne im laufenden Intervall",
+            "Normal": "Normal",
+            "Warning": "Warnung",
+            "Critical": "Kritisch"
         },
         "en": {
             "Ortsnetz Auslastung": "Ortsnetz-Auslastung"

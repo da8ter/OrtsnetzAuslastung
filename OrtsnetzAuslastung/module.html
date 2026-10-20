@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    :root {
+        --sym-mt: 0px;
+        --sym-ms: 0px;
+        --sym-mb: 0px;
+        --fg: var(--content-color, #ffffff);
+        --surface: color-mix(in srgb, var(--fg) 7%, transparent);
+        --border: color-mix(in srgb, var(--fg) 14%, transparent);
+        --muted: color-mix(in srgb, var(--fg) 55%, transparent);
+        --green: #34c759;
+        --yellow: #ffcc00;
+        --red: #ff453a;
+        --unknown: color-mix(in srgb, var(--fg) 35%, transparent);
+        --accent: var(--accent-color, #00cdab);
+    }
+    html, body { margin: 0; padding: 0; height: 100%; background: transparent; }
+    body {
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 14px;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+    }
+    #wurzel {
+        box-sizing: border-box;
+        height: 100%;
+        padding: var(--sym-mt) var(--sym-ms) var(--sym-mb) var(--sym-ms);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        container-type: size;
+    }
+    .s-0 { --c: var(--green); }
+    .s-1 { --c: var(--yellow); }
+    .s-2 { --c: var(--red); }
+    .s--1 { --c: var(--unknown); }
+
+    /* Kopf: Gesamtampel */
+    .kopf { display: flex; align-items: center; gap: 12px; }
+    .ampel {
+        flex: none; width: 34px; height: 34px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 55%, #fff) 0%, var(--c) 55%);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent), 0 0 18px color-mix(in srgb, var(--c) 45%, transparent);
+        transition: background .4s, box-shadow .4s;
+    }
+    .s--1 .ampel { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent); }
+    .kopf .text { min-width: 0; }
+    .kopf .zustand { font-size: 1.15em; font-weight: 700; line-height: 1.2; }
+    .kopf .unter { color: var(--muted); font-size: .85em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Phasen */
+    .phasen { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-height: 0; justify-content: center; }
+    .phase {
+        display: grid; grid-template-columns: 2.2em 1fr auto; align-items: center; gap: 10px;
+        background: var(--surface); border-radius: 12px; padding: 8px 12px;
+    }
+    .phase .name { font-weight: 700; color: var(--muted); }
+    .phase .wert { font-size: 1.25em; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+    .phase .wert small { font-size: .65em; font-weight: 600; color: var(--muted); margin-left: 2px; }
+    .phase .strom { display: block; text-align: right; font-size: .7em; font-weight: 600; color: var(--muted); }
+    .skala { position: relative; height: 18px; }
+    .skala .spur {
+        position: absolute; left: 0; right: 0; top: 7px; height: 4px; border-radius: 999px;
+        background: linear-gradient(90deg, var(--red) 0%, var(--yellow) 12%, var(--green) 30%, var(--green) 70%, var(--yellow) 88%, var(--red) 100%);
+        opacity: .35;
+    }
+    .skala .mitte { position: absolute; left: 50%; top: 3px; width: 1px; height: 12px; background: var(--border); }
+    .skala .band {
+        position: absolute; top: 5px; height: 8px; border-radius: 999px;
+        background: color-mix(in srgb, var(--c) 45%, transparent);
+        transition: left .6s, width .6s;
+    }
+    .skala .punkt {
+        position: absolute; top: 2px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
+        background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent);
+        transition: left .6s;
+    }
+    .phase.aus { opacity: .45; }
+    .phase.aus .punkt, .phase.aus .band { display: none; }
+
+    /* Fuss */
+    .fuss { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+        display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+        background: var(--surface); font-size: .82em; white-space: nowrap;
+    }
+    .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--unknown)); }
+    .chip svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+    .chip.laden { --c: var(--green); }
+    .chip.entladen { --c: var(--yellow); }
+
+    .hinweis {
+        display: none; background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--fg);
+        border-radius: 10px; padding: 6px 10px; font-size: .82em;
+    }
+    .hinweis.zeigen { display: block; }
+
+    .kurz { display: none; }
+    .skala .marken { display: none; }
+
+    /* Flache Kachel (2×1): Spannungen nebeneinander, ohne Skala */
+    @container (max-height: 230px) {
+        .phasen { flex-direction: row; gap: 6px; align-items: center; }
+        .phase { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 4px; flex: 1; min-width: 0; }
+        .phase .name { font-size: .8em; }
+        .phase .wert { text-align: center; font-size: 1.05em; }
+        .phase .strom { text-align: center; }
+        .skala { display: none; }
+        .fuss .neben { display: none; }
+    }
+    @container (max-height: 150px) {
+        .fuss, .kopf .unter, .phase .strom { display: none; }
+        .ampel { width: 24px; height: 24px; }
+    }
+    /* Schmale Kachel (1×1): kurzer Zustand, kleinere Werte ohne Einheit */
+    @container (max-width: 260px) {
+        .fuss .neben, .kopf .unter { display: none; }
+        .lang { display: none; }
+        .kurz { display: inline; }
+        .kopf { gap: 8px; }
+        .ampel { width: 22px; height: 22px; }
+        .phasen { gap: 4px; }
+        .phase { padding: 5px 2px; border-radius: 9px; }
+        .phase .wert { font-size: .9em; }
+        .phase .wert small { display: none; }
+        .fuss { display: none; }
+    }
+    /* Maximiert: groessere Werte und Beschriftung der Skala */
+    @container (min-height: 420px) and (min-width: 520px) {
+        #wurzel { gap: 18px; }
+        .ampel { width: 46px; height: 46px; }
+        .kopf .zustand { font-size: 1.5em; }
+        .phasen { justify-content: flex-start; gap: 12px; }
+        .phase { padding: 14px 18px; grid-template-columns: 2.6em 1fr auto; gap: 18px; }
+        .phase .name { font-size: 1.15em; }
+        .phase .wert { font-size: 1.7em; }
+        .skala { height: 34px; }
+        .skala .marken { display: flex; justify-content: space-between; position: absolute; left: 0; right: 0; top: 20px; font-size: .72em; color: var(--muted); }
+        .chip { font-size: .95em; padding: 7px 12px; }
+    }
+</style>
+<script>
+    /* Systemraender der Visu so frueh wie moeglich uebernehmen */
+    (function () {
+        try {
+            var p = new URLSearchParams(window.location.search);
+            var r = document.documentElement.style;
+            [['margintop', '--sym-mt'], ['marginside', '--sym-ms'], ['marginbottom', '--sym-mb']].forEach(function (x) {
+                var v = parseInt(p.get(x[0]), 10);
+                if (isFinite(v) && v >= 0) { r.setProperty(x[1], v + 'px'); }
+            });
+        } catch (e) { /* Vorgaben gelten */ }
+    })();
+</script>
+</head>
+<body>
+<div id="wurzel">
+    <div class="kopf s--1" id="kopf">
+        <div class="ampel"></div>
+        <div class="text">
+            <div class="zustand" id="zustand"></div>
+            <div class="unter" id="unter"></div>
+        </div>
+    </div>
+    <div class="hinweis" id="hinweis"></div>
+    <div class="phasen" id="phasen"></div>
+    <div class="fuss" id="fuss"></div>
+</div>
+<script>
+    var MIN_V = 207, MAX_V = 253; // 230 V ± 10 % (EN 50160)
+    var state = { phases: [], t: {} };
+    var ICONS = {
+        bolt: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+        wave: '<svg viewBox="0 0 24 24"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-4 5-2"/></svg>',
+        battery: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg>',
+        factory: '<svg viewBox="0 0 24 24"><path d="M2 21V10l6 4V10l6 4V4h4l2 17z"/></svg>',
+        cloud: '<svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18z"/><path d="M12 15v-4m0 0-2 2m2-2 2 2"/></svg>'
+    };
+
+    function t(k) { return (state.t && state.t[k]) || k; }
+    function num(v, d) { return Number(v).toLocaleString(document.documentElement.lang || 'de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+    function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function pos(v) { return Math.max(0, Math.min(100, (v - MIN_V) / (MAX_V - MIN_V) * 100)); }
+
+    function ago(ts) {
+        if (!ts) { return t('never'); }
+        var s = Math.max(0, Math.round(Date.now() / 1000 - ts));
+        if (s < 60) { return t('just now'); }
+        if (s < 3600) { return t('%d min ago').replace('%d', Math.round(s / 60)); }
+        var d = new Date(ts * 1000);
+        return d.toLocaleTimeString(document.documentElement.lang || 'de-DE', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderKopf() {
+        var o = state.overall === undefined ? -1 : state.overall;
+        document.getElementById('kopf').className = 'kopf s-' + o;
+        document.getElementById('zustand').innerHTML = '<span class="lang">' + esc(t('overall' + o)) + '</span><span class="kurz">' + esc(t('short' + o)) + '</span>';
+        document.getElementById('unter').textContent = t('Last upload') + ': ' + ago(state.last);
+        var h = document.getElementById('hinweis');
+        var msg = !state.active ? t('Sending is switched off') : (state.code >= 200 ? state.message : '');
+        h.textContent = msg || '';
+        h.className = 'hinweis' + (msg ? ' zeigen' : '');
+    }
+
+    function renderPhasen() {
+        var box = document.getElementById('phasen');
+        var html = '';
+        (state.phases || []).forEach(function (p) {
+            if (!p.on) { return; }
+            var s = p.s === undefined ? -1 : p.s;
+            var v = typeof p.v === 'number' ? p.v : null;
+            var band = '';
+            if (typeof p.min === 'number' && typeof p.max === 'number' && p.max > p.min) {
+                band = '<div class="band" style="left:' + pos(p.min) + '%;width:' + Math.max(1, pos(p.max) - pos(p.min)) + '%"></div>';
+            }
+            html += '<div class="phase s-' + s + (v === null ? ' aus' : '') + '">'
+                + '<div class="name">L' + p.n + '</div>'
+                + '<div class="skala" title="' + esc(t('Range of the current interval')) + '"><div class="spur"></div><div class="mitte"></div>' + band
+                + '<div class="marken"><span>' + MIN_V + ' V</span><span>230 V</span><span>' + MAX_V + ' V</span></div>'
+                + (v !== null ? '<div class="punkt" style="left:' + pos(v) + '%"></div>' : '') + '</div>'
+                + '<div class="wert">' + (v !== null ? num(v, 1) : '–') + '<small>V</small>'
+                + (typeof p.a === 'number' ? '<span class="strom">' + num(p.a, 1) + ' A</span>' : '') + '</div>'
+                + '</div>';
+        });
+        box.innerHTML = html;
+    }
+
+    function renderFuss() {
+        var c = [];
+        if (typeof state.power === 'number') {
+            var bezug = state.power >= 0;
+            c.push('<span class="chip">' + ICONS.bolt + esc(t(bezug ? 'Import' : 'Export')) + ' ' + num(Math.abs(state.power) >= 1000 ? Math.abs(state.power) / 1000 : Math.abs(state.power), Math.abs(state.power) >= 1000 ? 2 : 0) + (Math.abs(state.power) >= 1000 ? ' kW' : ' W') + '</span>');
+        }
+        if (typeof state.f === 'number') {
+            c.push('<span class="chip neben">' + ICONS.wave + num(state.f, 2) + ' Hz</span>');
+        }
+        var st = state.storage === undefined ? -1 : state.storage;
+        c.push('<span class="chip ' + (st === 1 ? 'laden' : st === 2 ? 'entladen' : '') + '">' + ICONS.battery + (st === 1 || st === 2 ? '<span class="dot"></span>' : '') + esc(t('storage' + st)) + '</span>');
+        var r = state.redispatch === undefined ? -1 : state.redispatch;
+        var rd = esc(t('redispatch' + r));
+        if (state.measures > 0) { rd += ' · ' + state.measures + ' ' + esc(t('measures')); }
+        c.push('<span class="chip neben ' + (r === 1 ? 's-1' : '') + '">' + ICONS.factory + (r === 1 ? '<span class="dot"></span>' : '') + rd + '</span>');
+        document.getElementById('fuss').innerHTML = c.join('');
+    }
+
+    function render() { renderKopf(); renderPhasen(); renderFuss(); }
+
+    function handleMessage(data) {
+        var u;
+        try { u = typeof data === 'string' ? JSON.parse(data) : data; } catch (e) { return; }
+        if (!u || typeof u !== 'object') { return; }
+        // Live-Werte (alle paar Sekunden) in den bestehenden Stand einmischen; sonst ist es der volle Stand
+        if (u.live && typeof u.live === 'object') {
+            (u.live.phases || []).forEach(function (np) {
+                (state.phases || []).forEach(function (op) { if (op.n === np.n) { Object.assign(op, np); } });
+            });
+            ['f', 'power'].forEach(function (k) { if (k in u.live) { state[k] = u.live[k]; } });
+        } else {
+            Object.assign(state, u);
+        }
+        render();
+    }
+    window.handleMessage = handleMessage;
+    setInterval(renderKopf, 30000);
+</script>
+</body>
+</html>
