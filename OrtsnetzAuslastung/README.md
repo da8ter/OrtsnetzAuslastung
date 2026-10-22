@@ -54,7 +54,7 @@ __Konfigurationsseite__:
 | Strom L1–L3 | Optional, in A. Ein Vorzeichen des Zählers wird ignoriert (Effektivwert). |
 | Netzleistung, Einheit, Vorzeichen | Gesamte Wirkleistung am Hausanschluss; der Dienst erwartet Bezug positiv und Einspeisung negativ. Keine Wechselrichterleistung, keine einzelne Phase. |
 | Ladezustand Batterie | Optional, 0–100 %. |
-| PV-Prognose für heute | Optional, in kWh. Geht nur mit eingetragener PV-Anlagengröße hinaus und höchstens 10 kWh je kWp. |
+| PV-Prognose für heute | Optional, in kWh. Der Dienst nutzt sie nur für die Größe des Messpunkts auf der Karte (Ertrag je kWp und Tag), nicht für Spannungsbewertung oder Ampel. Geht nur mit eingetragener PV-Anlagengröße hinaus und höchstens 10 kWh je kWp. |
 | PV-Anlage, Speicherkapazität, Messgerät | Angaben zur Anlage; 0 bzw. leer = nicht senden. |
 
 Unten auf der Seite zeigt eine Zeile den Standort, der tatsächlich gesendet wird. **Zu sendende Daten anzeigen** zeigt die Nutzlast, ohne zu senden; **Jetzt senden** überträgt sofort (höchstens einmal pro Minute).

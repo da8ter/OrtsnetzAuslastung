@@ -90,7 +90,7 @@
                     "type": "RowLayout",
                     "items": [
                         { "type": "SelectVariable", "name": "BatterySOC", "caption": "Battery state of charge (%)" },
-                        { "type": "SelectVariable", "name": "PVForecast", "caption": "PV forecast for today (kWh)" }
+                        { "type": "SelectVariable", "name": "PVForecast", "caption": "PV forecast for today (kWh, optional, marker size on the map)" }
                     ]
                 }
             ]
@@ -107,7 +107,7 @@
                     ]
                 },
                 { "type": "ValidationTextBox", "name": "SmartmeterModel", "caption": "Meter (manufacturer and model, optional)", "validate": "^.{0,120}$", "width": "400px" },
-                { "type": "Label", "caption": "The PV forecast is only sent with a plant size and may be at most 10 kWh per kWp." }
+                { "type": "Label", "caption": "PV forecast (optional): the service uses it only for the size of your marker on the map – the higher today's expected yield per kWp, the larger the dot. It has no effect on the voltage measurement or the traffic light. Send today's total forecast in kWh (e.g. from a forecast module or evcc); the service divides it by the plant size, so the plant size must be set and the forecast may be at most 10 kWh per kWp." }
             ]
         }
     ],
